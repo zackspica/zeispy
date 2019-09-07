@@ -31,12 +31,12 @@ def simple_stack_bins(folder, compo='ZZ', stack_method='linear', df=20. ):
     fileout = params['corrType']+'.'+sourcesta+'.'+compo
     folderout = '%s/bins/cc_average'%params['WORKDIR']
     out = os.path.join(folderout,fileout)
-    print folder
+    print (folder)
     try:os.makedirs(folderout)
     except: pass
 
     bins = sorted(glob.glob(folder+'*%s*'%compo))
-    print len(bins),' CC for component %s for station %s'%(compo, sourcesta)
+    print (len(bins),' CC for component %s for station %s'%(compo, sourcesta))
 
     for ibin, bin in enumerate(bins):
         day = os.path.basename(bin)
@@ -45,10 +45,10 @@ def simple_stack_bins(folder, compo='ZZ', stack_method='linear', df=20. ):
         if ibin == 0.:
             divider = np.ones(np.shape(matrix)[0])
             if glob.glob(out+'_*.npy') != []:
-                print '>> One stack file already exist: continue.'
+                print ('>> One stack file already exist: continue.')
                 stacker = np.load(bin, allow_pickle=True)
             else:
-                print '>> New stacking...'
+                print ('>> New stacking...')
                 stacker = matrix
             continue
         else:
@@ -61,8 +61,8 @@ def simple_stack_bins(folder, compo='ZZ', stack_method='linear', df=20. ):
                             stack_method=stack_method, df=df)
                        # divider[icc]+=1.
                     except Exception as e:
-                        print e
-        print sourcesta, day
+                        print (e)
+        print (sourcesta, day)
     #for i in np.arange(len(stacker)):
     #    stacker[i] /= divider[i]
     
@@ -71,7 +71,7 @@ def simple_stack_bins(folder, compo='ZZ', stack_method='linear', df=20. ):
     del matrix, stacker
 
 
-def stack(data, stack_method='linear', pws_timegate=25, pws_power=2, df=20.):
+def stack(data, stack_method='linear', pws_timegate=10, pws_power=2, df=20.):
     """Original stack function from MSNoise
 
     :param data: matrix in which every line is a cc to be stacked.
@@ -103,14 +103,17 @@ def stack(data, stack_method='linear', pws_timegate=25, pws_power=2, df=20.):
     elif stack_method == "pws":
         corr = np.zeros(data.shape[1], dtype='f8')
         phasestack = np.zeros(data.shape[1], dtype='c8')
+        for i in range(data.shape[0]):
+            data[i] -= data[i].mean()
         for c in data:
             phase = np.angle(sp.signal.hilbert(c))
             phasestack.real += np.cos(phase)
             phasestack.imag += np.sin(phase)
         coh = 1. / data.shape[0] * np.abs(phasestack)
 
-        timegate_samples = pws_timegate * df
-        coh = np.convolve(sp.signal.boxcar(timegate_samples)/timegate_samples, coh, 'same')
+        timegate_samples = int(pws_timegate * df)
+        coh = np.convolve(sp.signal.boxcar(timegate_samples) /
+                timegate_samples, coh, 'same')
         for c in data:
             corr += c * np.power(coh, pws_power)
         corr /= data.shape[0]
